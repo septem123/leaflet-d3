@@ -114,7 +114,7 @@
 	"use strict";
 
 	// L is defined by the Leaflet library, see git://github.com/Leaflet/Leaflet.git for documentation
-	L.HexbinLayer = L.Layer.extend({
+	L.HexbinLayer = L.Class.extend({
 		includes: [L.Mixin.Events],
 
 		options : {
@@ -180,10 +180,10 @@
 			//this._data = [];
 		},
 
-		// addTo : function(map) {
-		// 	map.addLayer(this);
-		// 	return this;
-		// },
+		addTo : function(map) {
+			map.addLayer(this);
+			return this;
+		},
 
 		_initContainer : function() {
 			var container = null;
@@ -435,7 +435,7 @@
 	"use strict";
 
 	// L is defined by the Leaflet library, see git://github.com/Leaflet/Leaflet.git for documentation
-	L.PingLayer = L.Layer.extend({
+	L.PingLayer = L.Class.extend({
 		includes: [L.Mixin.Events],
 
 		/*
@@ -527,10 +527,10 @@
 		},
 
 		// Add the layer to the map
-		// addTo : function(map) {
-		// 	map.addLayer(this);
-		// 	return this;
-		// },
+		addTo : function(map) {
+			map.addLayer(this);
+			return this;
+		},
 
 		/*
 		 * Method by which to "add" pings
