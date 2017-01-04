@@ -2,7 +2,7 @@
 	"use strict";
 
 	// L is defined by the Leaflet library, see git://github.com/Leaflet/Leaflet.git for documentation
-	L.PingLayer = L.Class.extend({
+	L.PingLayer = L.Layer.extend({
 		includes: [L.Mixin.Events],
 
 		/*
@@ -94,10 +94,10 @@
 		},
 
 		// Add the layer to the map
-		addTo : function(map) {
-			map.addLayer(this);
-			return this;
-		},
+		// addTo : function(map) {
+		// 	map.addLayer(this);
+		// 	return this;
+		// },
 
 		/*
 		 * Method by which to "add" pings
