@@ -1,0 +1,75 @@
+.flatpickr-day {
+    border-radius: 0px;
+    margin-bottom: 2px;
+}
+
+.arhat-hack.flatpickr-day:hover,
+.arhat-hack.flatpickr-day:focus,
+.arhat-hack.flatpickr-day.today:hover,
+.arhat-hack.flatpickr-day.today:focus {
+    border-color: #ea594e;
+    background: transparent;
+    color: #000000;
+}
+
+.arhat-hack.flatpickr-day.selected {
+    border-color: #ea594e;
+    border-width: 2px;
+    background: transparent;
+    color: #000000;
+}
+
+.arhat-hack.flatpickr-day.today {
+    border-width: 2px;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover,
+.flatpickr-day:focus,
+.flatpickr-day.prevMonthDay:focus,
+.flatpickr-day.nextMonthDay:focus {
+    cursor: pointer;
+    outline: 0;
+    background: transparent;
+    border-color: #959ea9;
+}
+
+.times {
+    position: absolute;
+    top: 2px;
+    right: -50px;
+    width: 45px;
+    padding-top: 6px;
+    box-shadow: 1px 0 0 #e6e6e6, -1px 0 0 #e6e6e6, 0 1px 0 #e6e6e6, 0 -1px 0 #e6e6e6, 0 3px 13px rgba(0, 0, 0, 0.08);
+    border-radius: 5px;
+    display: none;
+}
+
+.times .hour {
+    display: inline-block;
+    color: #393939;
+    cursor: pointer;
+    margin-left: 3px;
+    margin-bottom: 2px;
+    width: 35px;
+    height: 1rem;
+    border: 2px solid transparent;
+}
+
+.hour.selected {
+    border-color: #ea594e;
+    color: #000000;
+}
+
+.times .flatpickr-am-pm {
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-block;
+    font-weight: 400;
+    padding: 5px 15.5px;
+}
+
+.times .flatpickr-am-pm:hover {
+    background: #f0f0f0;
+}

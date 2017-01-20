@@ -3,84 +3,20 @@
 <head>
     <title>flatpickr test</title>
     <link rel="stylesheet" href="../../node_modules/flatpickr/dist/flatpickr.css">
+    <link rel="stylesheet" href="../../node_modules/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="./demo.css">
+
     <script src="../../node_modules/flatpickr/dist/flatpickr.js"></script>
     <script src="../../node_modules/flatpickr/dist/l10n/zh.js" charset="utf-8"></script>
     <script src="../../node_modules/d3/d3.js" charset="utf-8"></script>
     <script src="./jquery.js"></script>
     <script src="./lodash.js"></script>
+    <script src="./demo.js"></script>
+    <script src="./arhat-client.js"></script>
+    <script src="../../node_modules/leaflet/dist/leaflet-src.js"></script>
+    <script src="../../dist/leaflet-d3.js" charset="utf-8"></script>
 
     <style>
-        .flatpickr-day {
-            border-radius: 0px;
-            margin-bottom: 2px;
-        }
-
-        .arhat-hack.flatpickr-day:hover, 
-        .arhat-hack.flatpickr-day:focus, 
-        .arhat-hack.flatpickr-day.today:hover, 
-        .arhat-hack.flatpickr-day.today:focus {
-            border-color: #ea594e;
-            background: transparent;
-            color: #000000;
-        }
-
-        .arhat-hack.flatpickr-day.selected {
-            border-color: #ea594e;
-            border-width: 2px;
-            background: transparent;
-            color: #000000;
-        }
-
-        .flatpickr-day:hover,
-        .flatpickr-day.prevMonthDay:hover,
-        .flatpickr-day.nextMonthDay:hover,
-        .flatpickr-day:focus,
-        .flatpickr-day.prevMonthDay:focus,
-        .flatpickr-day.nextMonthDay:focus {
-            cursor: pointer;
-            outline: 0;
-            background: transparent;
-            border-color: #959ea9;
-        }
-
-        .times {
-            position: absolute;
-            top: 2px;
-            right: -50px;
-            width: 45px;
-            padding-top: 6px;
-            box-shadow: 1px 0 0 #e6e6e6, -1px 0 0 #e6e6e6, 0 1px 0 #e6e6e6, 0 -1px 0 #e6e6e6, 0 3px 13px rgba(0,0,0,0.08);
-            border-radius: 5px;
-            display: none;
-        }
-
-        .times .hour {
-            display: inline-block;
-            color: #393939;
-            cursor: pointer;
-            margin-left: 3px;
-            margin-bottom: 2px;
-            width: 35px;
-            height: 1rem;
-            border: 2px solid transparent;
-        }
-
-        .hour.selected {
-            border-color: #ea594e;
-            color: #000000;
-        }
-
-        .times .flatpickr-am-pm {
-            cursor: pointer;
-            font-size: 14px;
-            display: inline-block;
-            font-weight: 400;
-            padding: 5px 15.5px;
-        }
-
-        .times .flatpickr-am-pm:hover {
-            background: #f0f0f0;
-        }
     </style>
 </head>
 
@@ -88,164 +24,13 @@
 
     <div style="position: absolute; left: 10rem; top: 10rem;">
 <input type="text" class="flatpickr" placeholder="Pick date" data-input />
-<a class="reset" href="#" style="position: absolute;right: 0px; top: -20px">重置</a>
+<a class="toggleMode" href="#" style="position: absolute; right: 40px; top: -20px">多选</a>
+<a class="reset" href="#" style="position: absolute; right: 0px; top: -20px">重置</a>
 <div class="times"></div>
-</div>
-</div>
 
+</div>
+<div id="map" style="width: 600px; height: 400px; border: 1px solid #ccc;position: absolute;left: 40rem;"></div>
 <script>
-    var color = d3.scale.quantize().range(['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA']);
-    color.domain([5, 50]);
-
-    var colorValues = {};
-    var hourSelect = [];
-
-    var center = [43.653226, -79.38318429999998];
-    var latFn = d3.random.normal(center[0], 1);
-    var longFn = d3.random.normal(center[1], 1);
-
-    function times(data) {
-        var $timesdiv = $(document.querySelector('.times'));
-        $timesdiv.empty();
-        var repaint_data = _.slice(data, 0, 24);
-
-        repaint_data.forEach(function (d, index) {
-            var $time_span = $(document.createElement('span'));
-            $time_span.addClass('hour');
-            if (index < 12) {
-                $time_span.addClass('am');
-            } else {
-                $time_span.addClass('pm');
-            }
-            $time_span.attr('title', d.time);
-            $time_span.css('background', color(d.count));
-            $time_span.data(d.data);
-            $time_span.appendTo($timesdiv);
-        });
-
-        var $hours_am = $('.hour.am');
-        var $hours_pm = $('.hour.pm');
-
-        $hours_pm.hide();
-
-        times.repaint = function () {
-            _.forEach($('.times .hour'), function (hour, index) {
-                var $hour = $(hour);
-                var d = repaint_data[index];
-                $hour.attr('title', d.time);
-                $hour.css('background', color(d.count));
-                $hour.data(d.data);
-            });
-        }
-
-        var $am_pm = $(document.createElement('span'));
-        $am_pm.addClass('flatpickr-am-pm');
-        $am_pm.text('AM');
-        $am_pm.attr('title', 'Click to toggle');
-        $am_pm.appendTo($timesdiv);
-
-        times.container = $timesdiv;
-        times.selectedItem = [];
-        times.getSelectedData = function () {
-            var data = [];
-            _.forEach(times.selectedItem, function (item) {
-                var $item = $(item);
-                data = data.concat($item.data());
-                // console.log($item.index(), $item.data());
-            });
-            return data;
-
-        }
-
-        $timesdiv.off('click').on('click', 'span', function (e) {
-            e.preventDefault();
-            var $target = $(e.target);
-            if ($target.hasClass('flatpickr-am-pm')) {
-                if ($target.text() === 'PM') {
-                    $target.text('AM');
-                    $hours_pm.hide();
-                    $hours_am.show();
-                } else {
-                    $target.text('PM');
-                    $hours_pm.show();
-                    $hours_am.hide();
-                }
-                times.repaint();
-            } else {
-                $target.toggleClass('selected');
-                times.selectedItem = [];
-                _.forEach(times.container.find('.selected'), function (item) {
-                    times.selectedItem.push(item);
-                });
-            }
-        });
-
-        return times;
-    }
-
-    var time;
-
-    window.fp = flatpickr(".flatpickr", {
-        'inline': true,
-        'mode': 'single',
-        "locale": Flatpickr.l10ns.zh,
-        clickOpens: false,
-        onChange: function (selectedDates, dateStr, instance) {
-            if (selectedDates.length === 1) {
-                var mockdata = [];
-
-                mockdata = _.times(24, function (i) {
-                    var randomCount = _.random(5, 50);
-                    var randomData = [];
-                    randomData = _.times(randomCount, function (i) {
-                        return {
-                            title: '地点' + i,
-                            lng_lat: [longFn(), latFn()]
-                        }
-                    });
-
-                    return {
-                        time: '2017-1-16 ' + i,
-                        count: randomCount,
-                        data: randomData
-                    }
-                });
-                time = times(mockdata);
-                times.container.show();
-            } else if (selectedDates.length > 1 || selectedDates.length === 0) {
-                times.container.hide();
-            }
-
-            if (selectedDates.length === 1) {
-                console.log('single select');
-            } else {
-                console.log('multiple select');
-            }
-
-            selectedDates.forEach(function (date) {
-                console.log(date.getTime());
-            });
-        },
-        onDayCreate: function (dObj, dStr, fp, dayElem) {
-            dayElem.classList.add('arhat-hack');
-            if (dayElem.classList.contains('today')) dayElem.click();
-            if (!dayElem.classList.contains('nextMonthDay') && !dayElem.classList.contains('prevMonthDay')) {
-                colorValues[dayElem.textContent] || (colorValues[dayElem.textContent] = _.random(5, 50));
-                dayElem.style.background = color(colorValues[dayElem.textContent])
-            }
-        },
-        onReady: function () {
-
-        }
-    });
-
-    window.fp.input.type = 'hidden';
-    window.fp.calendarContainer.classList.remove('arrowTop');
-    document.querySelector('.reset').addEventListener("click", function () {
-        fp.clear();
-        colorValues = {};
-        hourSelect = [];
-    });
 </script>
 </body>
 
