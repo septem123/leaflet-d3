@@ -54,7 +54,7 @@
                         });
 
                         var color = d3.scale.quantize().range(['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA']);
-                        color.domain([0, 10]);
+                        color.domain([0, 20]);
 
                         var colorValues = {};
 
@@ -78,6 +78,7 @@
                                 }
                                 $time_span.attr('title', d.time);
                                 $time_span.css('background', color(d.count));
+                                $time_span.text(d.count);
                                 $time_span.data(d.data);
                                 $time_span.appendTo($timesdiv);
                             })
@@ -93,6 +94,7 @@
                                     var d = repaint_data[index];
                                     $hour.attr('title', d.time);
                                     $hour.css('background', color(d.count));
+                                    $hour.text(d.count);
                                     $hour.data(d.data);
                                 })
                             }
@@ -115,29 +117,62 @@
                             }
 
                             $timesdiv.off('click').on('click', 'span', function(e) {
-                                e.preventDefault()
-                                var $target = $(e.target)
+                                e.preventDefault();
+                                var $target = $(e.target);
                                 if ($target.hasClass('flatpickr-am-pm')) {
                                     if ($target.text() === 'PM') {
-                                        $target.text('AM')
-                                        $hours_pm.hide()
-                                        $hours_am.show()
+                                        $target.text('AM');
+                                        $hours_pm.hide();
+                                        $hours_am.show();
                                     } else {
-                                        $target.text('PM')
-                                        $hours_pm.show()
-                                        $hours_am.hide()
+                                        $target.text('PM');
+                                        $hours_pm.show();
+                                        $hours_am.hide();
                                     }
-                                    times.repaint()
+                                    times.repaint();
                                 } else {
-                                    $target.toggleClass('selected')
-                                    times.selectedItem = []
+                                    $target.toggleClass('selected');
+                                    times.selectedItem = [];
                                     _.forEach(times.container.find('.selected'), function(item) {
-                                        times.selectedItem.push(item)
-                                    })
+                                        times.selectedItem.push(item);
+                                    });
                                 }
                             })
 
                             return times;
+                        }
+
+                        function monthChange(fp) {
+                            // colorValues = {};
+                            var monthGroup = groups[0];
+                            var currentDate = fp.currentYear + ' ' + (fp.currentMonth + 1);
+                            view.reset(function() {
+                                monthGroup.selectExact([new Date(currentDate).getTime().toString()], function(result) {
+                                    view.selections({
+                                        skip: 0,
+                                        limit: result.selected
+                                    }, function(data) {
+                                        var dayGroup = _.groupBy(data, function(d) {
+                                            return new Date(d[2]).getDate();
+                                        });
+                                        var dayCollection = $(fp.days).children().not('.prevMonthDay').not('.nextMonthDay');
+                                        _.forEach(dayCollection, function(dayElem) {
+                                            dayElem.classList.remove('disabled');
+                                            dayElem.style.background = '';
+                                            var count = (colorValues[dayElem.textContent] = dayGroup[dayElem.textContent] || []).length;
+                                            if (count === 0) {
+                                                dayElem.classList.add('disabled');
+                                            } else {
+                                                dayElem.style.background = color(count);
+                                            }
+                                        });
+
+                                        hexLayer.data(_.map(data, function(d) {
+                                            return [d[14], d[13]];
+                                        }));
+                                    });
+                                });
+                            })
                         }
 
                         var fp = flatpickr('.flatpickr', {
@@ -145,12 +180,15 @@
                             'mode': 'single',
                             'locale': Flatpickr.l10ns.zh,
                             clickOpens: false,
+                            onMonthChange: function(dObj, dStr, fp, dayElem) {
+                                monthChange(fp);
+                            },
                             onChange: function(selectedDates, dateStr, instance) {
                                 var dayGroup = groups[1];
                                 var keys = selectedDates.map(function(date) {
-                                    return new Date(date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate()).getTime().toString();
+                                    return new Date(date.getFullYear() + ' ' + (date.getMonth() + 1) + ' ' + date.getDate()).getTime().toString();
                                 });
-
+                                // dayGroup.selectAll(function() {
                                 dayGroup.selectExact(keys, function(result) {
                                     view.selections({
                                         skip: 0,
@@ -177,11 +215,17 @@
 
                                             time = times(repaintData);
                                             time.container.show();
+
+                                            hexLayer.data(_.map(data, function(d) {
+                                                return [d[14], d[13]];
+                                            }));
                                         } else {
                                             time.container.hide();
                                         }
                                     });
                                 });
+                                // });
+
                             },
                             onDayCreate: function(dObj, dStr, fp, dayElem) {
                                 dayElem.classList.add('arhat-hack');
@@ -197,28 +241,7 @@
                                 }
                             },
                             onReady: function(dObj, dStr, fp, dayElem) {
-                                var monthGroup = groups[0];
-                                var now = new Date();
-                                var currentDate = now.getFullYear() + '-' + (now.getMonth() + 1);
-                                monthGroup.selectExact([new Date(currentDate).getTime().toString()], function(result) {
-                                    view.selections({
-                                        skip: 0,
-                                        limit: result.selected
-                                    }, function(data) {
-                                        var dayGroup = _.groupBy(data, function(d) {
-                                            return new Date(d[2]).getDate();
-                                        });
-                                        var dayCollection = $(fp.days).children().not('.prevMonthDay').not('.nextMonthDay');
-                                        _.forEach(dayCollection, function(dayElem) {
-                                            var count = (colorValues[dayElem.textContent] = dayGroup[dayElem.textContent] || []).length;
-                                            if (count === 0) {
-                                                dayElem.classList.add('disabled');
-                                            } else {
-                                                dayElem.style.background = color(count);
-                                            }
-                                        });
-                                    });
-                                });
+                                monthChange(fp);
                             }
                         })
 
@@ -226,7 +249,7 @@
                         fp.calendarContainer.classList.remove('arrowTop')
                         document.querySelector('.reset').addEventListener('click', function() {
                             fp.clear();
-                            colorValues = {};
+                            // colorValues = {};
                         })
 
                         $('.toggleMode').on('click', function(e) {
