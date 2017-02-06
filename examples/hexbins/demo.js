@@ -53,8 +53,14 @@
                             groups.push(group);
                         });
 
-                        var color = d3.scale.quantize().range(['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA']);
-                        color.domain([0, 20]);
+                        function createColorScale(colors) {
+                            return d3.scale.quantize().range(colors);
+                        }
+
+                        var colors = ['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA'];
+
+                        var dayColor = createColorScale(colors);
+                        var hourColor = createColorScale(colors);
 
                         var colorValues = {};
 
@@ -67,6 +73,14 @@
                             var $timesdiv = $(document.querySelector('.times'));
                             $timesdiv.empty();
                             var repaint_data = _.slice(data, 0, 24);
+                            // var all_data = [];
+
+                            function setElem($elem, d) {
+                                $elem.attr('title', d.time);
+                                $elem.css('background', hourColor(d.count));
+                                // $elem.text(d.count);
+                                $elem.data(d.data);
+                            }
 
                             repaint_data.forEach(function(d, index) {
                                 var $time_span = $(document.createElement('span'));
@@ -76,12 +90,10 @@
                                 } else {
                                     $time_span.addClass('pm');
                                 }
-                                $time_span.attr('title', d.time);
-                                $time_span.css('background', color(d.count));
-                                $time_span.text(d.count);
-                                $time_span.data(d.data);
+                                // setElem($time_span, d);
                                 $time_span.appendTo($timesdiv);
-                            })
+                                // all_data = all_data.concat(d.data);
+                            });
 
                             var $hours_am = $('.hour.am');
                             var $hours_pm = $('.hour.pm');
@@ -92,12 +104,11 @@
                                 _.forEach($('.times .hour'), function(hour, index) {
                                     var $hour = $(hour);
                                     var d = repaint_data[index];
-                                    $hour.attr('title', d.time);
-                                    $hour.css('background', color(d.count));
-                                    $hour.text(d.count);
-                                    $hour.data(d.data);
+                                    setElem($hour, d);
                                 })
                             }
+
+                            times.repaint();
 
                             var $am_pm = $(document.createElement('span'));
                             $am_pm.addClass('flatpickr-am-pm');
@@ -106,15 +117,6 @@
                             $am_pm.appendTo($timesdiv);
 
                             times.container = $timesdiv;
-                            times.selectedItem = [];
-                            times.getSelectedData = function() {
-                                var data = [];
-                                _.forEach(times.selectedItem, function(item) {
-                                    var $item = $(item);
-                                    data = data.concat($item.data());
-                                })
-                                return data;
-                            }
 
                             $timesdiv.off('click').on('click', 'span', function(e) {
                                 e.preventDefault();
@@ -132,14 +134,32 @@
                                     times.repaint();
                                 } else {
                                     $target.toggleClass('selected');
-                                    times.selectedItem = [];
+                                    var selectData = [];
                                     _.forEach(times.container.find('.selected'), function(item) {
-                                        times.selectedItem.push(item);
+                                        var $item = $(item);
+                                        selectData = selectData.concat(_.toArray($item.data()));
                                     });
+                                    if (selectData.length == 0) selectData = all_data;
+                                    drawHeat(selectData);
                                 }
                             })
 
                             return times;
+                        }
+
+                        function drawHeat(data) {
+                            hexLayer.data(_.map(data, function(d) {
+                                return [d[14], d[13]];
+                            }));
+                        }
+
+                        function modfiyDayElem(dayElem) {
+                            var count = (colorValues[dayElem.textContent] || []).length;
+                            if (count === 0) {
+                                dayElem.classList.add('disabled');
+                            } else {
+                                dayElem.style.background = dayColor(count);
+                            }
                         }
 
                         function monthChange(fp) {
@@ -150,26 +170,24 @@
                                 monthGroup.selectExact([new Date(currentDate).getTime().toString()], function(result) {
                                     view.selections({
                                         skip: 0,
-                                        limit: result.selected
+                                        limit: result.selected === result.size && result.children.length > 1 ? 0 : result.selected
                                     }, function(data) {
                                         var dayGroup = _.groupBy(data, function(d) {
                                             return new Date(d[2]).getDate();
                                         });
+                                        var maxArray = _.maxBy(_.toArray(dayGroup), function(obj) {
+                                            return obj.length;
+                                        }) || [];
+                                        dayColor.domain([0, maxArray.length]);
                                         var dayCollection = $(fp.days).children().not('.prevMonthDay').not('.nextMonthDay');
                                         _.forEach(dayCollection, function(dayElem) {
                                             dayElem.classList.remove('disabled');
                                             dayElem.style.background = '';
-                                            var count = (colorValues[dayElem.textContent] = dayGroup[dayElem.textContent] || []).length;
-                                            if (count === 0) {
-                                                dayElem.classList.add('disabled');
-                                            } else {
-                                                dayElem.style.background = color(count);
-                                            }
+                                            colorValues[dayElem.textContent] = dayGroup[dayElem.textContent] || []
+                                            modfiyDayElem(dayElem);
                                         });
 
-                                        hexLayer.data(_.map(data, function(d) {
-                                            return [d[14], d[13]];
-                                        }));
+                                        drawHeat(data);
                                     });
                                 });
                             })
@@ -181,79 +199,77 @@
                             'locale': Flatpickr.l10ns.zh,
                             clickOpens: false,
                             onMonthChange: function(dObj, dStr, fp, dayElem) {
+                                fp.clear();
                                 monthChange(fp);
                             },
                             onChange: function(selectedDates, dateStr, instance) {
+                                var monthGroup = groups[0];
                                 var dayGroup = groups[1];
                                 var keys = selectedDates.map(function(date) {
                                     return new Date(date.getFullYear() + ' ' + (date.getMonth() + 1) + ' ' + date.getDate()).getTime().toString();
                                 });
-                                // dayGroup.selectAll(function() {
                                 dayGroup.selectExact(keys, function(result) {
                                     view.selections({
                                         skip: 0,
-                                        limit: result.selected
+                                        limit: result.selected === result.size && result.children.length > 1 ? 0 : result.selected
                                     }, function(data) {
-                                        if (selectedDates.length === 1) {
+                                        if (instance.config.mode === 'single' && selectedDates.length === 1) {
                                             var hourGroup = _.groupBy(data, function(d) {
                                                 return new Date(d[2]).getHours();
                                             });
                                             var date = new Date(selectedDates[0]);
                                             var repaintData = _.times(24, function(i) {
                                                 return {
-                                                    time: date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate() + ' ' + i,
+                                                    time: i + ':00' + ' ~ ' + (i + 1) + ':00',
                                                     count: 0,
                                                     data: []
                                                 }
                                             });
 
+                                            var countArray = [];
+
                                             _.forEach(hourGroup, function(d, key) {
                                                 var obj = repaintData[key];
                                                 obj.count = d.length;
                                                 obj.data = d;
+                                                countArray.push(d.length);
                                             });
+
+                                            hourColor.domain([0, _.max(countArray)]);
 
                                             time = times(repaintData);
                                             time.container.show();
 
-                                            hexLayer.data(_.map(data, function(d) {
-                                                return [d[14], d[13]];
-                                            }));
                                         } else {
-                                            time.container.hide();
+                                            time && time.container.hide();
                                         }
+
+                                        drawHeat(data);
                                     });
                                 });
-                                // });
 
                             },
                             onDayCreate: function(dObj, dStr, fp, dayElem) {
                                 dayElem.classList.add('arhat-hack');
-                                if (_.size(colorValues) > 0) {
-                                    if (!dayElem.classList.contains('nextMonthDay') && !dayElem.classList.contains('prevMonthDay')) {
-                                        var count = colorValues[dayElem.textContent].length;
-                                        if (count === 0) {
-                                            dayElem.classList.add('disabled');
-                                        } else {
-                                            dayElem.style.background = color(count);
-                                        }
-                                    }
-                                }
+                                if (dayElem.classList.contains('nextMonthDay') || dayElem.classList.contains('prevMonthDay')) {
+                                    dayElem.classList.add('disabled');
+                                } else if (_.size(colorValues) > 0) modfiyDayElem(dayElem);
                             },
                             onReady: function(dObj, dStr, fp, dayElem) {
                                 monthChange(fp);
                             }
                         })
 
-                        fp.input.type = 'hidden'
-                        fp.calendarContainer.classList.remove('arrowTop')
+                        fp.input.type = 'hidden';
+                        fp.calendarContainer.classList.remove('arrowTop');
                         document.querySelector('.reset').addEventListener('click', function() {
                             fp.clear();
                             // colorValues = {};
-                        })
+                            monthChange(fp);
+                        });
 
                         $('.toggleMode').on('click', function(e) {
-                            fp.clear();
+                            var currentDate = fp.currentYear + ' ' + (fp.currentMonth + 1);
                             var $target = $(e.target);
                             if (fp.config.mode === 'single') {
                                 fp.set('mode', 'multiple');
@@ -262,6 +278,8 @@
                                 fp.set('mode', 'single');
                                 $target.text('多选');
                             }
+                            fp.setDate(new Date(currentDate).getTime());
+                            fp.clear();
                         })
                     });
                 });
