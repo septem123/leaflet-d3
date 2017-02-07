@@ -1,6 +1,14 @@
+.flatpickr-days {
+    padding: 0 2.375px 2.375px 2.375px;
+}
+
 .flatpickr-day {
     border-radius: 0px;
     margin-bottom: 2px;
+}
+
+.arhat-hack.flatpickr-day.disabled {
+    background: rgb(238, 238, 238);
 }
 
 .arhat-hack.flatpickr-day:hover,
@@ -72,4 +80,14 @@
 
 .times .flatpickr-am-pm:hover {
     background: #f0f0f0;
+}
+
+.hexbin-hexagon {
+    pointer-events: all;
+    stroke-width: 2px;
+    stroke: black;
+}
+
+.hexbin-hexagon:hover {
+    stroke: red;
 }

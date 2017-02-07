@@ -7,7 +7,7 @@
             var osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                 osmAttrib = '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 osm = L.tileLayer(osmUrl, { maxZoom: 18, attribution: osmAttrib });
-            var map = new L.Map('map', { layers: [osm], center: new L.LatLng(center[0], center[1]), zoom: 9 });
+            var map = new L.Map('map', { layers: [osm], center: new L.LatLng(center[0], center[1]), zoom: 8 });
             var options = {
                 radius: 12,
                 opacity: 0.5,
@@ -29,8 +29,10 @@
             };
 
             var hexLayer = L.hexbinLayer(options).addTo(map);
+            // var colors = ['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA'];
+            var colors = ['rgb(214, 230, 133)', 'rgb(30, 104, 35)'];
 
-            hexLayer.colorScale().range(['yellow', 'red']);
+            hexLayer.colorScale().range(colors);
             with(arhat.constants()) {
                 arhat.tables.create({
                     uri: 'file://D://pw_view.csv',
@@ -54,10 +56,8 @@
                         });
 
                         function createColorScale(colors) {
-                            return d3.scale.quantize().range(colors);
+                            return d3.scale.linear().range(colors);
                         }
-
-                        var colors = ['#E4F1FA', '#C9E1F3', '#B3D5EE', '#94C4E7', '#76B4E0', '#5DA5DA'];
 
                         var dayColor = createColorScale(colors);
                         var hourColor = createColorScale(colors);
@@ -73,11 +73,11 @@
                             var $timesdiv = $(document.querySelector('.times'));
                             $timesdiv.empty();
                             var repaint_data = _.slice(data, 0, 24);
-                            // var all_data = [];
+                            var all_data = [];
 
                             function setElem($elem, d) {
                                 $elem.attr('title', d.time);
-                                $elem.css('background', hourColor(d.count));
+                                $elem.css('background', d.count > 0 ? hourColor(d.count) : 'rgb(238, 238, 238)');
                                 // $elem.text(d.count);
                                 $elem.data(d.data);
                             }
@@ -92,7 +92,7 @@
                                 }
                                 // setElem($time_span, d);
                                 $time_span.appendTo($timesdiv);
-                                // all_data = all_data.concat(d.data);
+                                all_data = all_data.concat(d.data);
                             });
 
                             var $hours_am = $('.hour.am');
@@ -170,7 +170,7 @@
                                 monthGroup.selectExact([new Date(currentDate).getTime().toString()], function(result) {
                                     view.selections({
                                         skip: 0,
-                                        limit: result.selected === result.size && result.children.length > 1 ? 0 : result.selected
+                                        limit: result.selected === result.size && result.groups[monthGroup.groupId].children.length > 1 ? 0 : result.selected
                                     }, function(data) {
                                         var dayGroup = _.groupBy(data, function(d) {
                                             return new Date(d[2]).getDate();
@@ -203,7 +203,6 @@
                                 monthChange(fp);
                             },
                             onChange: function(selectedDates, dateStr, instance) {
-                                var monthGroup = groups[0];
                                 var dayGroup = groups[1];
                                 var keys = selectedDates.map(function(date) {
                                     return new Date(date.getFullYear() + ' ' + (date.getMonth() + 1) + ' ' + date.getDate()).getTime().toString();
@@ -211,7 +210,7 @@
                                 dayGroup.selectExact(keys, function(result) {
                                     view.selections({
                                         skip: 0,
-                                        limit: result.selected === result.size && result.children.length > 1 ? 0 : result.selected
+                                        limit: result.selected === result.size && result.groups[dayGroup.groupId].children.length > 1 ? 0 : result.selected
                                     }, function(data) {
                                         if (instance.config.mode === 'single' && selectedDates.length === 1) {
                                             var hourGroup = _.groupBy(data, function(d) {
@@ -262,13 +261,14 @@
 
                         fp.input.type = 'hidden';
                         fp.calendarContainer.classList.remove('arrowTop');
-                        document.querySelector('.reset').addEventListener('click', function() {
+                        $('.reset').on('click', function(e) {
+                            e.preventDefault();
                             fp.clear();
-                            // colorValues = {};
                             monthChange(fp);
                         });
 
                         $('.toggleMode').on('click', function(e) {
+                            e.preventDefault();
                             var currentDate = fp.currentYear + ' ' + (fp.currentMonth + 1);
                             var $target = $(e.target);
                             if (fp.config.mode === 'single') {
@@ -280,7 +280,34 @@
                             }
                             fp.setDate(new Date(currentDate).getTime());
                             fp.clear();
-                        })
+                            monthChange(fp);
+                        });
+
+                        $('.play').on('click', function(e) {
+                            var $toggleMode = $('.toggleMode');
+                            if ($toggleMode.text() === '多选') $toggleMode.click();
+                            var i = 0;
+
+                            function interval() {
+                                var timeoutobj = setTimeout(function() {
+                                    clearTimeout(timeoutobj);
+                                    var $days = $(fp.days).children().not('.disabled');
+                                    if ($days.length > i) {
+                                        var elem = $days[i];
+                                        if (!elem.classList.contains('disabled')) elem.click();
+                                        interval();
+                                        i++;
+                                    } else {
+                                        fp.clear();
+                                        monthChange(fp);
+                                    }
+                                }, 500);
+                            }
+
+                            interval();
+
+                            // $('.flatpickr-day.arhat-hack:not(".disabled")').fo
+                        });
                     });
                 });
             }
